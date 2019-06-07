@@ -30,3 +30,7 @@ show-install-instructions:
 
 findphp:
 	@echo $(PHP_EXECUTABLE)
+
+clean-tests:
+	rm -f tests/*.diff tests/*.exp tests/*.log tests/*.out tests/*.php tests/*.sh
+
