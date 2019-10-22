@@ -894,7 +894,10 @@ void xdebug_init_coverage_globals(xdebug_coverage_globals_t *xg)
 
 void xdebug_coverage_count_line_if_active(zend_op_array *op_array, char *file, int lineno)
 {
-	if (!op_array->reserved[XG_COV(code_coverage_filter_offset)] && XG_COV(code_coverage_active)) {
+	int index = XG_COV(code_coverage_filter_offset);
+	printf("%d", index);
+	if (!op_array->reserved[index] &&
+			XG_COV(code_coverage_active)) {
 		xdebug_count_line(file, lineno, 0, 0);
 	}
 }
