@@ -49,18 +49,6 @@ environment:
           VC: vc15
           OPCACHE: no
           APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.4.0
-          ARCH: x86
-          TS: 1
-          VC: vc15
-          OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.4.0
-          ARCH: x86
-          TS: 0
-          VC: vc15
-          OPCACHE: yes
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
         - PHP_VER: 7.3.13
           ARCH: x64
           TS: 1
@@ -73,18 +61,6 @@ environment:
           VC: vc15
           OPCACHE: no
           APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.3.13
-          ARCH: x86
-          TS: 1
-          VC: vc15
-          OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.3.13
-          ARCH: x86
-          TS: 0
-          VC: vc15
-          OPCACHE: yes
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
         - PHP_VER: 7.2.26
           ARCH: x64
           TS: 1
@@ -96,18 +72,6 @@ environment:
           TS: 0
           VC: vc15
           OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.2.26
-          ARCH: x86
-          TS: 1
-          VC: vc15
-          OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-        - PHP_VER: 7.2.26
-          ARCH: x86
-          TS: 0
-          VC: vc15
-          OPCACHE: yes
           APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
         - PHP_VER: 7.1.33
           ARCH: x64
@@ -120,18 +84,6 @@ environment:
           TS: 0
           VC: vc14
           OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-        - PHP_VER: 7.1.33
-          ARCH: x86
-          TS: 1
-          VC: vc14
-          OPCACHE: no
-          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-        - PHP_VER: 7.1.33
-          ARCH: x86
-          TS: 0
-          VC: vc14
-          OPCACHE: yes
           APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
 
 build_script:
