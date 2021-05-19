@@ -261,6 +261,7 @@ void xdebug_disable_opcache_optimizer(void);
 #define XDEBUG_MODE_GCSTATS      1<<3
 #define XDEBUG_MODE_PROFILING    1<<4
 #define XDEBUG_MODE_TRACING      1<<5
+#define XDEBUG_MODE_RECORDER     1<<6
 int xdebug_lib_set_mode(char *mode);
 
 #define XDEBUG_MODE_IS_OFF() ((XG(globals.library.mode) == XDEBUG_MODE_OFF))

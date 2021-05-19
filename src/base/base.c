@@ -88,6 +88,7 @@ static zend_op_array *xdebug_compile_file(zend_file_handle *file_handle, int typ
 
 	xdebug_coverage_compile_file(op_array);
 	xdebug_debugger_compile_file(op_array);
+	xdebug_recorder_compile_file(file_handle);
 
 	return op_array;
 }
@@ -712,6 +713,8 @@ static void xdebug_execute_ex(zend_execute_data *execute_data)
 		if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 			xdebug_tracing_init_if_requested(op_array);
 		}
+
+		/* XDEBUG_MODE_RECORDER init is in xdebug_base_rinit() */
 	}
 
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_DEVELOP) && (signed long) XDEBUG_VECTOR_COUNT(XG_BASE(stack)) >= XINI_BASE(max_nesting_level) && (XINI_BASE(max_nesting_level) != -1)) {
@@ -730,6 +733,9 @@ static void xdebug_execute_ex(zend_execute_data *execute_data)
 
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_DEVELOP)) {
 		xdebug_monitor_handler(fse);
+	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_execute_ex(function_nr, fse);
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_tracing_execute_ex(function_nr, fse);
@@ -790,6 +796,9 @@ static void xdebug_execute_ex(zend_execute_data *execute_data)
 		xdebug_coverage_execute_ex_end(fse, op_array, code_coverage_filename, code_coverage_function_name);
 	}
 
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_execute_ex_end(function_nr, fse, execute_data);
+	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_tracing_execute_ex_end(function_nr, fse, execute_data);
 	}
@@ -839,6 +848,7 @@ static void xdebug_execute_internal(zend_execute_data *current_execute_data, zva
 	zend_execute_data    *edata = EG(current_execute_data);
 	function_stack_entry *fse;
 	int                   function_nr = 0;
+	int                   function_call_recorded = 0;
 	int                   function_call_traced = 0;
 	int                   restore_error_handler_situation = 0;
 #if PHP_VERSION_ID >= 80100
@@ -870,6 +880,9 @@ static void xdebug_execute_internal(zend_execute_data *current_execute_data, zva
 
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_DEVELOP)) {
 		xdebug_monitor_handler(fse);
+	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		function_call_recorded = xdebug_recorder_execute_internal(function_nr, fse);
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		function_call_traced = xdebug_tracing_execute_internal(function_nr, fse);
@@ -915,6 +928,10 @@ static void xdebug_execute_internal(zend_execute_data *current_execute_data, zva
 	 * lines without a corresponding function call line. */
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING) && function_call_traced) {
 		xdebug_tracing_execute_internal_end(function_nr, fse, return_value);
+	}
+
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING) && function_call_recorded) {
+		xdebug_recorder_execute_internal_end(function_nr, fse, return_value);
 	}
 
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_STEP_DEBUG)) {
@@ -1275,6 +1292,10 @@ void xdebug_base_rinit()
 
 	if (XG_BASE(private_tmp)) {
 		xdebug_log_ex(XLOG_CHAN_CONFIG, XLOG_INFO, "PRIVTMP", "Systemd Private Temp Directory is enabled (%s)", XG_BASE(private_tmp));
+	}
+
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_init_if_requested();
 	}
 }
 

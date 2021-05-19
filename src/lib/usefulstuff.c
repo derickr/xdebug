@@ -550,7 +550,7 @@ int xdebug_format_output_filename(char **filename, char *format, char *script_na
 				case 'u': { /* timestamp (in microseconds) */
 					uint64_t nanotime = xdebug_get_nanotime();
 
-					xdebug_str_add_fmt(&fname, "%lu.%06d",
+					xdebug_str_add_fmt(&fname, "%lu_%06d",
 						nanotime / NANOS_IN_SEC,
 						(nanotime % NANOS_IN_SEC) / NANOS_IN_MICROSEC
 					);

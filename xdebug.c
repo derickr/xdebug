@@ -63,6 +63,7 @@
 #include "lib/var_export_line.h"
 #include "lib/var_export_text.h"
 #include "profiler/profiler.h"
+#include "recorder/recorder.h"
 #include "tracing/tracing.h"
 
 #if PHP_VERSION_ID >= 80000
@@ -348,6 +349,9 @@ PHP_INI_BEGIN()
 	/* GC Stats support */
 	STD_PHP_INI_ENTRY("xdebug.gc_stats_output_name", "gcstats.%p",      PHP_INI_SYSTEM|PHP_INI_PERDIR, OnUpdateString, settings.gc_stats.output_name, zend_xdebug_globals, xdebug_globals)
 
+	/* Recorder settings */
+	STD_PHP_INI_ENTRY("xdebug.recorder_output_name", "xdebug_%c_%u",    PHP_INI_ALL,    OnUpdateString, settings.recorder.recorder_output_name, zend_xdebug_globals, xdebug_globals)
+
 	/* Tracing settings */
 	STD_PHP_INI_ENTRY("xdebug.trace_output_name", "trace.%c",           PHP_INI_ALL,    OnUpdateString, settings.tracing.trace_output_name, zend_xdebug_globals, xdebug_globals)
 	STD_PHP_INI_ENTRY("xdebug.trace_format",      "0",                  PHP_INI_ALL,    OnUpdateLong,   settings.tracing.trace_format,      zend_xdebug_globals, xdebug_globals)
@@ -429,6 +433,9 @@ static void php_xdebug_init_globals(zend_xdebug_globals *xg)
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_GCSTATS)) {
 		xdebug_init_gc_stats_globals(&xg->globals.gc_stats);
+	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_init_recorder_globals(&xg->globals.recorder);
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_init_tracing_globals(&xg->globals.tracing);
@@ -552,6 +559,9 @@ PHP_MINIT_FUNCTION(xdebug)
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING)) {
 		xdebug_profiler_minit();
 	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_minit(INIT_FUNC_ARGS_PASSTHRU);
+	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_tracing_minit(INIT_FUNC_ARGS_PASSTHRU);
 	}
@@ -651,6 +661,9 @@ PHP_RINIT_FUNCTION(xdebug)
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING)) {
 		xdebug_profiler_rinit();
 	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_rinit();
+	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_tracing_rinit();
 	}
@@ -686,6 +699,9 @@ ZEND_MODULE_POST_ZEND_DEACTIVATE_D(xdebug)
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING)) {
 		xdebug_profiler_post_deactivate();
+	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		xdebug_recorder_post_deactivate();
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		xdebug_tracing_post_deactivate();

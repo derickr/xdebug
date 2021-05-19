@@ -177,6 +177,11 @@ Thu, Apr 08, 2021 - Xdebug 3.0.4
      <file name="profiler.h" role="src" />
      <file name="profiler_private.h" role="src" />
     </dir>
+    <dir name="recorder">
+     <file name="recorder.c" role="src" />
+     <file name="recorder.h" role="src" />
+     <file name="recorder_private.h" role="src" />
+    </dir>
     <dir name="tracing">
      <file name="tracing.c" role="src" />
      <file name="tracing.h" role="src" />

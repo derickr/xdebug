@@ -148,6 +148,10 @@ static int xdebug_lib_set_mode_item(char *mode, int len)
 		XG_LIB(mode) |= XDEBUG_MODE_PROFILING;
 		return 1;
 	}
+	if (strncmp(mode, "recorder", len) == 0) {
+		XG_LIB(mode) |= XDEBUG_MODE_RECORDER;
+		return 1;
+	}
 	if (strncmp(mode, "trace", len) == 0) {
 		XG_LIB(mode) |= XDEBUG_MODE_TRACING;
 		return 1;
@@ -425,6 +429,8 @@ static int trigger_enabled(int for_mode, char **found_trigger_value)
 	if (!trigger_value) {
 		if (XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING) && (for_mode == XDEBUG_MODE_PROFILING)) {
 			trigger_name = "XDEBUG_PROFILE";
+		} else if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER) && (for_mode == XDEBUG_MODE_RECORDER)) {
+			trigger_name = "XDEBUG_RECORD";
 		} else if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING) && (for_mode == XDEBUG_MODE_TRACING)) {
 			trigger_name = "XDEBUG_TRACE";
 		} else if (XDEBUG_MODE_IS(XDEBUG_MODE_STEP_DEBUG) && (for_mode == XDEBUG_MODE_STEP_DEBUG)) {

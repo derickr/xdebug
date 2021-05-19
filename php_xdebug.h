@@ -19,6 +19,7 @@
 
 #define XDEBUG_NAME       "Xdebug"
 #define XDEBUG_VERSION    "3.2.0-dev"
+#define XDEBUG_BUILD_ID   0x03020001
 #define XDEBUG_AUTHOR     "Derick Rethans"
 #define XDEBUG_COPYRIGHT  "Copyright (c) 2002-2021 by Derick Rethans"
 #define XDEBUG_COPYRIGHT_SHORT "Copyright (c) 2002-2021"
@@ -39,6 +40,7 @@
 #include "lib/lib.h"
 #include "gcstats/gc_stats.h"
 #include "profiler/profiler.h"
+#include "recorder/recorder.h"
 #include "tracing/tracing.h"
 #include "lib/compat.h"
 #include "lib/hash.h"
@@ -85,6 +87,7 @@ ZEND_BEGIN_MODULE_GLOBALS(xdebug)
 		xdebug_gc_stats_globals_t gc_stats;
 		xdebug_library_globals_t  library;
 		xdebug_profiler_globals_t profiler;
+		xdebug_recorder_globals_t recorder;
 		xdebug_tracing_globals_t  tracing;
 	} globals;
 	struct {
@@ -95,6 +98,7 @@ ZEND_BEGIN_MODULE_GLOBALS(xdebug)
 		xdebug_gc_stats_settings_t gc_stats;
 		xdebug_library_settings_t  library;
 		xdebug_profiler_settings_t profiler;
+		xdebug_recorder_settings_t recorder;
 		xdebug_tracing_settings_t  tracing;
 	} settings;
 ZEND_END_MODULE_GLOBALS(xdebug)

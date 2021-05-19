@@ -45,11 +45,11 @@ const char *xdebug_log_prefix[11] = {
 const char *xdebug_log_prefix_emoji[11] = {
 	"☠", "🛑 ", "", "⚠️ ", "", "", "", "🛈 ", "", "", "• "
 };
-const char *xdebug_channel_msg_prefix[8] = {
-	"CFG-", "LOG-", "DBG-", "GC-", "PROF-", "TRACE-", "COV-", "BASE-"
+const char *xdebug_channel_msg_prefix[9] = {
+	"CFG-", "LOG-", "DBG-", "GC-", "PROF-", "TRACE-", "COV-", "BASE-", "RECORD-"
 };
-const char *xdebug_channel_name[8] = {
-	"[Config] ", "[Log Files] ", "[Step Debug] ", "[GC Stats] ", "[Profiler] ", "[Tracing] ", "[Coverage] ", "[Base] "
+const char *xdebug_channel_name[9] = {
+	"[Config] ", "[Log Files] ", "[Step Debug] ", "[GC Stats] ", "[Profiler] ", "[Tracing] ", "[Coverage] ", "[Base] ", "[Recorder] "
 };
 
 static inline int xdebug_internal_log(int channel, int log_level, const char *message)
@@ -310,6 +310,7 @@ void xdebug_print_info(void)
 	print_feature_row("GC Stats", XDEBUG_MODE_GCSTATS, "garbage_collection");
 	print_feature_row("Profiler", XDEBUG_MODE_PROFILING, "profiler");
 	print_feature_row("Step Debugger", XDEBUG_MODE_STEP_DEBUG, "remote");
+	print_feature_row("Recorder", XDEBUG_MODE_RECORDER, "recorder");
 	print_feature_row("Tracing", XDEBUG_MODE_TRACING, "trace");
 
 	php_info_print_table_end();
@@ -762,6 +763,37 @@ static void print_step_debug_information(void)
 	php_info_print_table_end();
 }
 
+static void print_recorder_information(void)
+{
+	char *file_name;
+
+	if (!XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		return;
+	}
+
+	file_name = xdebug_get_recorder_filename();
+
+	php_info_print_table_start();
+	if (!sapi_module.phpinfo_as_text) {
+		PUTS("<tr class=\"h\"><th colspan=\"2\">Function Tracing</th><th>Docs</th></tr>\n");
+		if (file_name) {
+			xdebug_info_printf("<tr><td class=\"e\">Recorder File</td><td class=\"v\">%s</td><td class=\"d\"><a href=\"%srecorder\">🖹</a></td></tr>\n",
+				file_name, xdebug_lib_docs_base());
+		} else {
+			xdebug_info_printf("<tr><td colspan=\"2\" class=\"d\">Xdebug Recorder is not active</td><td class=\"d\"><a href=\"%srecorder\">🖹</a></td></tr>\n",
+				xdebug_lib_docs_base());
+		}
+	} else {
+		php_info_print_table_colspan_header(2, (char*) "Xdebug Recorder");
+		if (file_name) {
+			php_info_print_table_row(2, "Recorder File", file_name);
+		} else {
+			PUTS("Xdebug Recorder is not active\n");
+		}
+	}
+	php_info_print_table_end();
+}
+
 static void print_trace_information(void)
 {
 	char *file_name;
@@ -807,6 +839,7 @@ static void xdebug_display_all_info(void)
 	print_diagnostic_log();
 	print_step_debug_information();
 	print_profile_information();
+	print_recorder_information();
 	print_trace_information();
 
 	xdebug_print_php_section();
@@ -834,6 +867,9 @@ static void info_modes_set(INTERNAL_FUNCTION_PARAMETERS)
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING)) {
 		add_next_index_stringl(return_value, "profile", 7);
+	}
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+		add_next_index_stringl(return_value, "recorder", 8);
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_TRACING)) {
 		add_next_index_stringl(return_value, "trace", 5);
