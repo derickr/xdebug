@@ -82,30 +82,43 @@ typedef struct _xdebug_recorder_section xdebug_recorder_section;
 #define SECTION_FILE                0x03
 #define SECTION_FILE_VERSION           1
 
-
-static void add_uint8_t(xdebug_recorder_section *section, uint8_t value)
+static inline size_t unum_size(uint64_t value)
 {
-	*(uint8_t*)section->ptr = value;
-	section->ptr += sizeof(value);
+	size_t   bytes = 0;
+	uint64_t x = value;
+
+	do {
+		x >>= 7;
+		++bytes;
+	} while (x);
+//printf("UNUM_SIZE(%ld) = %ld\n", value, bytes);
+	return bytes;
 }
 
-static void add_uint16_t(xdebug_recorder_section *section, uint16_t value)
+static void add_unum(xdebug_recorder_section *section, uint64_t value)
 {
-	*(uint16_t*)section->ptr = value;
-	section->ptr += sizeof(value);
+	uint64_t x = value;
+
+//printf("ADD_UNUM(%ld): ", value);
+	do {
+		*(uint8_t*)section->ptr = x & 0x7FU;
+		if (x >>= 7) {
+			*(uint8_t*)section->ptr |= 0x80U;
+		}
+//printf("%02X", *(uint8_t*)section->ptr);
+		++section->ptr;
+	} while (x);
+//printf("\n");
 }
 
-static void add_uint32_t(xdebug_recorder_section *section, uint32_t value)
+static inline size_t string_size(size_t length)
 {
-	*(uint32_t*)section->ptr = value;
-	section->ptr += sizeof(value);
+	return unum_size(length) + length;
 }
 
-#define RECORDER_STR_SIZE(s) (sizeof(uint16_t) + strlen(s))
-static void add_string(xdebug_recorder_section *section, uint16_t length, const char *str)
+static void add_string(xdebug_recorder_section *section, size_t length, const char *str)
 {
-	*(uint16_t*)section->ptr = (uint16_t) length;
-	section->ptr += sizeof(uint16_t);
+	add_unum(section, length);
 
 	memcpy(section->ptr, str, length);
 	section->ptr += length;
@@ -120,21 +133,21 @@ static void add_data(xdebug_recorder_section *section, size_t length, uint8_t *d
 
 static xdebug_recorder_section *section_create(uint8_t type, uint8_t version, size_t size)
 {
-	size_t len = sizeof(xdebug_recorder_section) + 2*sizeof(uint8_t) + size + sizeof(uint8_t);
+	size_t len = sizeof(xdebug_recorder_section) + unum_size(type) + unum_size(version) + size + unum_size(0x7F);
 
 	xdebug_recorder_section *tmp = xdmalloc(len);
 	tmp->ptr = &tmp->data[0];
 	tmp->size = len;
 
-	add_uint8_t(tmp, type);
-	add_uint8_t(tmp, version);
+	add_unum(tmp, type);
+	add_unum(tmp, version);
 
 	return tmp;
 }
 
 static void recorder_write_section(xdebug_recorder_context *context, xdebug_recorder_section *section)
 {
-	add_uint8_t(section, 0xff);
+	add_unum(section, 0x7F);
 
 	fwrite(section->data, section->size - sizeof(xdebug_recorder_section), 1, context->recorder_file);
 	fflush(context->recorder_file);
@@ -185,20 +198,24 @@ static void xdebug_recorder_write_header(void *ctxt)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
 	xdebug_recorder_section *section;
+	size_t                   data_size = 0;
 
 	fwrite("XDEBUG", strlen("XDEBUG"), 1, context->recorder_file);
 
+	data_size += unum_size(XDEBUG_BUILD_ID);
+	data_size += unum_size(PHP_VERSION_ID);
+	data_size += unum_size(1); // ZTS flag
+	data_size += unum_size(PHP_DEBUG);
+
 	section = section_create(SECTION_HEADER, SECTION_HEADER_VERSION, sizeof(uint32_t) + 5*sizeof(uint8_t));
-	add_uint32_t(section, XDEBUG_BUILD_ID);
-	add_uint8_t(section, PHP_MAJOR_VERSION);
-	add_uint8_t(section, PHP_MINOR_VERSION);
-	add_uint8_t(section, PHP_RELEASE_VERSION);
+	add_unum(section, XDEBUG_BUILD_ID);
+	add_unum(section, PHP_VERSION_ID);
 #ifdef ZTS
-	add_uint8_t(section, 1);
+	add_unum(section, 1);
 #else
-	add_uint8_t(section, 0);
+	add_unum(section, 0);
 #endif
-	add_uint8_t(section, PHP_DEBUG);
+	add_unum(section, PHP_DEBUG);
 
 	recorder_write_section(context, section);
 }
@@ -210,7 +227,7 @@ static void file_list_size_counter(void *vs, xdebug_hash_element *he)
 	size_t                  *size = (size_t*) vs;
 	xdebug_file_index_entry *entry = (xdebug_file_index_entry*) he->ptr;
 
-	*size += sizeof(file_entry_index_t) + sizeof(uint16_t) + entry->filename_len;
+	*size += unum_size(entry->index) + string_size(entry->filename_len);
 }
 
 static void file_list_adder(void *s, xdebug_hash_element *he)
@@ -218,7 +235,7 @@ static void file_list_adder(void *s, xdebug_hash_element *he)
 	xdebug_recorder_section *section = (xdebug_recorder_section*) s;
 	xdebug_file_index_entry *entry = (xdebug_file_index_entry*) he->ptr;
 
-	add_uint16_t(section, entry->index);
+	add_unum(section, entry->index);
 	add_string(section, entry->filename_len, entry->filename);
 }
 
@@ -284,7 +301,7 @@ static uint16_t recorder_add_file_to_index(xdebug_recorder_context *context, con
 {
 	xdebug_file_index_entry *tmp = xdmalloc(sizeof(xdebug_file_index_entry));
 
-	tmp->index = 0x0a00 + context->file_list->size;
+	tmp->index = context->file_list->size;
 	tmp->filename = xdstrdup(filename);
 	tmp->filename_len = strlen(filename);
 
@@ -319,11 +336,10 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, const char *file
 	/* file_index + flags + name + file size + bytes */
 	section = section_create(
 		SECTION_FILE, SECTION_FILE_VERSION,
-		sizeof(file_index) + sizeof(flags) + /*RECORDER_STR_SIZE(filename) +*/ sizeof(file_size) + file_size);
-	add_uint16_t(section, file_index);
-	add_uint8_t(section, flags);
-	/*add_string(section, filename);*/
-	add_uint32_t(section, sinfo.st_size);
+		unum_size(file_index) + unum_size(flags) + unum_size(file_size) + file_size);
+	add_unum(section, file_index);
+	add_unum(section, flags);
+	add_unum(section, file_size);
 
 	do {
 		read_data = read(fp, buffer, sizeof(buffer));
