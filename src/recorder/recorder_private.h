@@ -26,9 +26,19 @@ struct _xdebug_recorder_context
 {
 	FILE        *recorder_file;
 	char        *recorder_filename;
-	xdebug_hash *file_list;
+	xdebug_hash *file_ref_list;
+	xdebug_hash *func_ref_list;
+	xdebug_hash *var_ref_list;
+};
+
+struct _xdebug_ref_list_entry
+{
+	uint64_t  idx;
+	char     *name;
+	size_t    name_len;
 };
 
 typedef struct _xdebug_recorder_context xdebug_recorder_context;
+typedef struct _xdebug_ref_list_entry xdebug_ref_list_entry;
 
 #endif
