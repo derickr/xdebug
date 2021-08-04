@@ -376,10 +376,16 @@ void xdebug_recorder_generator_return_value(void *ctxt, function_stack_entry *fs
 static uint64_t recorder_add_file_to_index(xdebug_recorder_context *context, const char *filename)
 {
 	xdebug_ref_list_entry *tmp = xdmalloc(sizeof(xdebug_ref_list_entry));
+	void *dummy;
+	size_t filename_len = strlen(filename);
+
+	if (xdebug_hash_find(context->file_ref_list, filename, filename_len, &dummy)) {
+		return -1;
+	}
 
 	tmp->idx = context->file_ref_list->size;
 	tmp->name = xdstrdup(filename);
-	tmp->name_len = strlen(filename);
+	tmp->name_len = filename_len;
 
 	xdebug_hash_add(context->file_ref_list, tmp->name, tmp->name_len, (void*) tmp);
 
@@ -390,7 +396,7 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, const char *file
 {
 	struct stat sinfo;
 	xdebug_recorder_section *section;
-	uint64_t file_index;
+	int64_t file_index;
 	uint32_t file_size;
 	uint8_t flags = 0x00;
 	int fp = open(filename, O_RDONLY);
@@ -407,6 +413,10 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, const char *file
 	}
 
 	file_index = recorder_add_file_to_index(context, filename);
+	if (file_index == -1) {
+		close(fp);
+		return;
+	}
 	file_size  = sinfo.st_size;
 
 	/* file_index + flags + name + file size + bytes */
