@@ -246,6 +246,9 @@ int xdebug_lib_start_with_request(int for_mode)
 		if (for_mode == XDEBUG_MODE_PROFILING && XDEBUG_MODE_IS(XDEBUG_MODE_PROFILING)) {
 			return 1;
 		}
+		if (for_mode == XDEBUG_MODE_RECORDER && XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
+			return 1;
+		}
 	}
 
 	return 0;
