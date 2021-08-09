@@ -392,48 +392,26 @@ static uint64_t recorder_add_file_to_index(xdebug_recorder_context *context, con
 	return tmp->idx;
 }
 
-void xdebug_recorder_add_file(xdebug_recorder_context *context, const char *filename)
+void xdebug_recorder_add_file(xdebug_recorder_context *context, zend_file_handle *handle)
 {
-	struct stat sinfo;
 	xdebug_recorder_section *section;
-	int64_t file_index;
-	uint32_t file_size;
 	uint8_t flags = 0x00;
-	int fp = open(filename, O_RDONLY);
-	uint8_t buffer[1024];
-	ssize_t read_data;
+	int64_t file_index;
 
-	if (!fp) {
-		return;
-	}
-
-	if (fstat(fp, &sinfo) != 0) {
-		close(fp);
-		return;
-	}
-
-	file_index = recorder_add_file_to_index(context, filename);
+	file_index = recorder_add_file_to_index(context, handle->filename);
 	if (file_index == -1) {
-		close(fp);
 		return;
 	}
-	file_size  = sinfo.st_size;
 
 	/* file_index + flags + name + file size + bytes */
 	section = section_create(
 		SECTION_FILE, SECTION_FILE_VERSION,
-		unum_size(file_index) + unum_size(flags) + unum_size(file_size) + file_size);
+		unum_size(file_index) + unum_size(flags) + unum_size(handle->len) + handle->len);
 	add_unum(section, file_index);
 	add_unum(section, flags);
-	add_unum(section, file_size);
+	add_unum(section, handle->len);
 
-	do {
-		read_data = read(fp, buffer, sizeof(buffer));
-//		printf("READ: %ld\n", read_data);
-		add_data(section, read_data, buffer);
-	} while (read_data > 0);
-
-	close(fp);
+	add_data(section, handle->len, (uint8_t*)handle->buf);
 
 	recorder_write_section(context, section);
 }
@@ -582,7 +560,7 @@ void xdebug_recorder_compile_file(zend_file_handle *handle)
 		return;
 	}
 
-	xdebug_recorder_add_file(XG_RECORDER(recorder_context), handle->filename);
+	xdebug_recorder_add_file(XG_RECORDER(recorder_context), handle);
 }
 
 #if 0
