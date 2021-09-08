@@ -87,6 +87,10 @@ typedef struct _xdebug_recorder_section xdebug_recorder_section;
 #define SECTION_FUNC_REF_LIST_VERSION          REF_LIST_VERSION
 #define SECTION_VAR_REF_LIST                   0x05
 #define SECTION_VAR_REF_LIST_VERSION           REF_LIST_VERSION
+#define SECTION_CALL                           0x06
+#define SECTION_CALL_VERSION                   1
+#define SECTION_EXIT                           0x07
+#define SECTION_EXIT_VERSION                   1
 
 static inline size_t unum_size(uint64_t value)
 {
@@ -127,6 +131,18 @@ static void xdebug_ref_list_dtor(xdebug_ref_list_entry *entry)
 {
 	xdfree(entry->name);
 	xdfree(entry);
+}
+
+uint64_t get_file_ref(xdebug_recorder_context *context, const char *name, size_t name_len)
+{
+	xdebug_ref_list_entry *entry;
+
+	if (xdebug_hash_find(context->file_ref_list, name, name_len, (void*) &entry)) {
+		return entry->idx;
+	} else {
+		assert(name);
+		return 0;
+	}
 }
 
 uint64_t get_func_ref(xdebug_recorder_context *context, const char *name, size_t name_len)
@@ -342,21 +358,67 @@ static char *xdebug_recorder_get_filename(void *ctxt)
 	return context->recorder_filename;
 }
 
+static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, function_stack_entry *fse)
+{
+	xdebug_recorder_section *section;
+	uint64_t file_index;
+	uint64_t function_index;
+	char     *tmp_fname;
+
+	/* Get file reference */
+	file_index = get_file_ref(context, ZSTR_VAL(fse->filename), ZSTR_LEN(fse->filename));
+
+	/* Get function reference */
+	tmp_fname = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_DEFAULT);
+	function_index = get_func_ref(context, tmp_fname, strlen(tmp_fname));
+	xdfree(tmp_fname);
+
+	/* file_index + function_index + timestamp + number of arguments */
+	section = section_create(
+		SECTION_CALL, SECTION_CALL_VERSION,
+		unum_size(fse->function_nr) + unum_size(fse->level) +
+		unum_size(file_index) + unum_size(function_index) + unum_size(fse->nanotime) + unum_size(fse->varc));
+	add_unum(section, fse->function_nr);
+	add_unum(section, fse->level);
+	add_unum(section, file_index);
+	add_unum(section, function_index);
+	add_unum(section, fse->nanotime);
+	add_unum(section, fse->varc);
+
+	recorder_write_section(context, section);
+}
+
 static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
-	char *tmp_name = xdebug_show_fname(fse->function, XDEBUG_SHOW_FNAME_TODO);
-	get_func_ref(context, tmp_name, strlen(tmp_name));
-	xdfree(tmp_name);
 
-//	fflush(context->recorder_file);
+	/* Add call entry */
+	xdebug_recorder_add_function_call(context, fse);
 }
+
+static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, function_stack_entry *fse)
+{
+	xdebug_recorder_section *section;
+
+	/* function_nr + level + timestamp */
+	section = section_create(
+		SECTION_EXIT, SECTION_EXIT_VERSION,
+		unum_size(fse->function_nr) + unum_size(fse->level) +
+		unum_size(fse->nanotime));
+	add_unum(section, fse->function_nr);
+	add_unum(section, fse->level);
+	add_unum(section, fse->nanotime);
+
+	recorder_write_section(context, section);
+}
+
 
 static void xdebug_recorder_function_exit(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
 
-	fflush(context->recorder_file);
+	/* Add exit entry */
+	xdebug_recorder_add_function_exit(context, fse);
 }
 
 static void xdebug_recorder_function_return_value(void *ctxt, function_stack_entry *fse, int function_nr, zval *return_value)
