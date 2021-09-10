@@ -183,6 +183,8 @@ Thu, Apr 08, 2021 - Xdebug 3.0.4
      <file name="recorder_private.h" role="src" />
      <file name="section.c" role="src" />
      <file name="section.h" role="src" />
+     <file name="var_export_binary.c" role="src" />
+     <file name="var_export_binary.h" role="src" />
     </dir>
     <dir name="tracing">
      <file name="tracing.c" role="src" />

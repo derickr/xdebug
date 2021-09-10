@@ -18,6 +18,7 @@
 #include "php_xdebug.h"
 
 #include "section.h"
+#include "var_export_binary.h"
 
 struct _xdebug_recorder_section {
 	size_t   capacity;
@@ -38,6 +39,14 @@ fprintf(stderr, "Realloc for %p from %ld to %ld (%ld + %ld + %d)\n", section, se
 		section->capacity = new_size;
 	}
 }
+
+
+static void xdebug_recorder_section_free(xdebug_recorder_section* section)
+{
+	xdfree(section->data);
+	xdfree(section);
+}
+
 
 static void xdebug_recorder_add_unum_ex(xdebug_recorder_section *section, uint64_t value)
 {
@@ -80,6 +89,14 @@ void xdebug_recorder_add_data(xdebug_recorder_section *section, size_t length, u
 	section->size += length;
 }
 
+void xdebug_recorder_add_zval(xdebug_recorder_section *section, zval data)
+{
+	xdebug_recorder_section *tmp = xdebug_recorder_section_create(SECTION_VARIABLE, SECTION_VARIABLE_VERSION, 0);
+	xdebug_get_zval_binary(tmp, &data, NULL);
+	xdebug_recorder_add_data(section, tmp->size, tmp->data);
+
+	xdebug_recorder_section_free(tmp);
+}
 
 xdebug_recorder_section *xdebug_recorder_section_create(uint8_t type, uint8_t version, size_t initial_cap)
 {
@@ -106,4 +123,6 @@ void xdebug_recorder_write_section(FILE *recorder_file, xdebug_recorder_section 
 fprintf(stderr, "Write size: %ld\n", section->size);
 	fwrite(section->data, section->size, 1, recorder_file);
 	fflush(recorder_file);
+
+	xdebug_recorder_section_free(section);
 }

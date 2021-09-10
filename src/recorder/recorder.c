@@ -294,6 +294,10 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 		uint64_t var_ref = get_var_ref(context, ZSTR_VAL(fse->var[i].name), ZSTR_LEN(fse->var[i].name));
 		xdebug_recorder_add_unum(section, var_ref);
 	}
+	/* Add argument values */
+	for (i = 0; i < argument_count; i++) {
+		xdebug_recorder_add_zval(section, fse->var[i].data);
+	}
 
 	xdebug_recorder_write_section(context->recorder_file, section);
 }

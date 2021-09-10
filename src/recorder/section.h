@@ -33,6 +33,8 @@
 #define SECTION_CALL_VERSION                   0
 #define SECTION_EXIT                           0x07
 #define SECTION_EXIT_VERSION                   0
+#define SECTION_VARIABLE                       0x08
+#define SECTION_VARIABLE_VERSION               0
 
 #define SECTION_MASK                           0x3F /* 6 bits, 63 types */
 #define SECTION_VERSION_SHIFT                  6
@@ -47,6 +49,7 @@ xdebug_recorder_section *xdebug_recorder_section_create(uint8_t type, uint8_t ve
 void xdebug_recorder_add_unum(xdebug_recorder_section *section, uint64_t value);
 void xdebug_recorder_add_string(xdebug_recorder_section *section, size_t length, const char *str);
 void xdebug_recorder_add_data(xdebug_recorder_section *section, size_t length, uint8_t *data);
+void xdebug_recorder_add_zval(xdebug_recorder_section *section, zval data);
 void xdebug_recorder_write_section(FILE *file, xdebug_recorder_section *section);
 
 #endif /* __HAVE_XDEBUG_RECORDER_SECTION_H__ */
