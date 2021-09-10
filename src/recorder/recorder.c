@@ -160,7 +160,7 @@ static void ref_list_size_counter(void *vs, xdebug_hash_element *he)
 	size_t                *size = (size_t*) vs;
 	xdebug_ref_list_entry *entry = (xdebug_ref_list_entry*) he->ptr;
 
-	*size += (XDEBUG_RECORDER_MAX_UNUM_SIZE * 2) + entry->name_len; /* Index + Str Length + String Data */
+	*size += (XDEBUG_RECORDER_AVG_UNUM_SIZE * 2) + entry->name_len; /* Index + Str Length + String Data */
 }
 
 static void ref_list_adder(void *s, xdebug_hash_element *he)
@@ -175,7 +175,7 @@ static void ref_list_adder(void *s, xdebug_hash_element *he)
 static void add_file_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
+	size_t                   array_size = XDEBUG_RECORDER_AVG_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->file_ref_list, (void*) &array_size, ref_list_size_counter);
 
@@ -190,7 +190,7 @@ static void add_file_ref_list(xdebug_recorder_context *context)
 static void add_func_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
+	size_t                   array_size = XDEBUG_RECORDER_AVG_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->func_ref_list, (void*) &array_size, ref_list_size_counter);
 
@@ -205,7 +205,7 @@ static void add_func_ref_list(xdebug_recorder_context *context)
 static void add_var_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
+	size_t                   array_size = XDEBUG_RECORDER_AVG_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->var_ref_list, (void*) &array_size, ref_list_size_counter);
 
@@ -281,7 +281,7 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	xdfree(tmp_fname);
 
 	/* file_index + function_index + timestamp + number of arguments */
-	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 6) * XDEBUG_RECORDER_MAX_UNUM_SIZE);
+	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 6) * XDEBUG_RECORDER_AVG_UNUM_SIZE);
 	xdebug_recorder_add_unum(section, fse->function_nr);
 	xdebug_recorder_add_unum(section, fse->level);
 	xdebug_recorder_add_unum(section, file_index);
@@ -312,7 +312,7 @@ static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, 
 	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
 
 	/* function_nr + level + timestamp */
-	section = xdebug_recorder_section_create(SECTION_EXIT, SECTION_EXIT_VERSION, 3 * XDEBUG_RECORDER_MAX_UNUM_SIZE);
+	section = xdebug_recorder_section_create(SECTION_EXIT, SECTION_EXIT_VERSION, 3 * XDEBUG_RECORDER_AVG_UNUM_SIZE);
 	xdebug_recorder_add_unum(section, fse->function_nr);
 	xdebug_recorder_add_unum(section, fse->level);
 	xdebug_recorder_add_unum(section, ntime);
@@ -374,7 +374,7 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, zend_file_handle
 	}
 
 	/* file_index + flags + name + file size + bytes */
-	section = xdebug_recorder_section_create(SECTION_FILE, SECTION_FILE_VERSION, (3 * XDEBUG_RECORDER_MAX_UNUM_SIZE) + handle->len);
+	section = xdebug_recorder_section_create(SECTION_FILE, SECTION_FILE_VERSION, (3 * XDEBUG_RECORDER_AVG_UNUM_SIZE) + handle->len);
 	xdebug_recorder_add_unum(section, file_index);
 	xdebug_recorder_add_unum(section, flags);
 	xdebug_recorder_add_unum(section, handle->len);

@@ -87,6 +87,7 @@ xdebug_recorder_section *xdebug_recorder_section_create(uint8_t type, uint8_t ve
 	uint64_t section_id;
 
 	tmp->capacity = initial_cap ? initial_cap : INITIAL_CAPACITY;
+	tmp->capacity += XDEBUG_RECORDER_MAX_UNUM_SIZE; /* For type */
 	tmp->data = xdmalloc(tmp->capacity);
 	tmp->size = 0;
 
@@ -102,7 +103,7 @@ fprintf(stderr, "Alloc for %p [%d:%d] as %ld\n", tmp, type, version, tmp->capaci
 void xdebug_recorder_write_section(FILE *recorder_file, xdebug_recorder_section *section)
 {
 	xdebug_recorder_add_unum(section, 0x7F);
-
+fprintf(stderr, "Write size: %ld\n", section->size);
 	fwrite(section->data, section->size, 1, recorder_file);
 	fflush(recorder_file);
 }

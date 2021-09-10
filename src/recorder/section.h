@@ -38,6 +38,7 @@
 #define SECTION_VERSION_SHIFT                  6
 
 
+#define XDEBUG_RECORDER_AVG_UNUM_SIZE 3
 #define XDEBUG_RECORDER_MAX_UNUM_SIZE 10
 
 typedef struct _xdebug_recorder_section xdebug_recorder_section;
