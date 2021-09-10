@@ -21,6 +21,7 @@
 
 #include "php_xdebug.h"
 #include "recorder_private.h"
+#include "section.h"
 
 #include "lib/compat.h"
 #include "lib/hash.h"
@@ -67,72 +68,6 @@ static FILE *xdebug_recorder_open_file(char **used_fname)
 	return file;
 }
 
-/* Sections */
-struct _xdebug_recorder_section {
-	size_t   size;
-	uint8_t *ptr;
-	uint8_t  data[1];
-};
-typedef struct _xdebug_recorder_section xdebug_recorder_section;
-
-#define REF_LIST_VERSION                       1
-
-#define SECTION_HEADER                         0x01
-#define SECTION_HEADER_VERSION                 1
-#define SECTION_FILE_REF_LIST                  0x02
-#define SECTION_FILE_REF_LIST_VERSION          REF_LIST_VERSION
-#define SECTION_FILE                           0x03
-#define SECTION_FILE_VERSION                   1
-#define SECTION_FUNC_REF_LIST                  0x04
-#define SECTION_FUNC_REF_LIST_VERSION          REF_LIST_VERSION
-#define SECTION_VAR_REF_LIST                   0x05
-#define SECTION_VAR_REF_LIST_VERSION           REF_LIST_VERSION
-#define SECTION_CALL                           0x06
-#define SECTION_CALL_VERSION                   1
-#define SECTION_EXIT                           0x07
-#define SECTION_EXIT_VERSION                   1
-
-static inline size_t unum_size(uint64_t value)
-{
-	size_t   bytes = 0;
-	uint64_t x = value;
-
-	do {
-		x >>= 7;
-		++bytes;
-	} while (x);
-//printf("UNUM_SIZE(%ld) = %ld\n", value, bytes);
-	return bytes;
-}
-
-static void add_unum(xdebug_recorder_section *section, uint64_t value)
-{
-	uint64_t x = value;
-
-//printf("ADD_UNUM(%ld): ", value);
-	do {
-		*(uint8_t*)section->ptr = x & 0x7FU;
-		if (x >>= 7) {
-			*(uint8_t*)section->ptr |= 0x80U;
-		}
-//printf("%02X", *(uint8_t*)section->ptr);
-		++section->ptr;
-	} while (x);
-//printf("\n");
-}
-
-static inline size_t string_size(size_t length)
-{
-	return unum_size(length) + length;
-}
-
-/* Reference lists */
-static void xdebug_ref_list_dtor(xdebug_ref_list_entry *entry)
-{
-	xdfree(entry->name);
-	xdfree(entry);
-}
-
 uint64_t get_file_ref(xdebug_recorder_context *context, const char *name, size_t name_len)
 {
 	xdebug_ref_list_entry *entry;
@@ -175,49 +110,18 @@ uint64_t get_var_ref(xdebug_recorder_context *context, const char *name, size_t 
 		entry->name = xdstrdup(name);
 		entry->name_len = name_len;
 
-		xdebug_hash_add(context->var_ref_list, name, name_len, (void*) &entry);
+		xdebug_hash_add(context->var_ref_list, name, name_len, (void*) entry);
 
 		return entry->idx;
 	}
 }
 
-/* Data addition */
-static void add_string(xdebug_recorder_section *section, size_t length, const char *str)
+static void xdebug_ref_list_dtor(xdebug_ref_list_entry *entry)
 {
-	add_unum(section, length);
-
-	memcpy(section->ptr, str, length);
-	section->ptr += length;
+	xdfree(entry->name);
+	xdfree(entry);
 }
 
-
-static void add_data(xdebug_recorder_section *section, size_t length, uint8_t *data)
-{
-	memcpy(section->ptr, data, length);
-	section->ptr += length;
-}
-
-static xdebug_recorder_section *section_create(uint8_t type, uint8_t version, size_t size)
-{
-	size_t len = sizeof(xdebug_recorder_section) + unum_size(type) + unum_size(version) + size + unum_size(0x7F);
-
-	xdebug_recorder_section *tmp = xdmalloc(len);
-	tmp->ptr = &tmp->data[0];
-	tmp->size = len;
-
-	add_unum(tmp, type);
-	add_unum(tmp, version);
-
-	return tmp;
-}
-
-static void recorder_write_section(xdebug_recorder_context *context, xdebug_recorder_section *section)
-{
-	add_unum(section, 0x7F);
-
-	fwrite(section->data, section->size - sizeof(xdebug_recorder_section), 1, context->recorder_file);
-	fflush(context->recorder_file);
-}
 
 /* The "handler" */
 static void *xdebug_recorder_init(void)
@@ -231,6 +135,7 @@ static void *xdebug_recorder_init(void)
 	tmp_recorder_context->file_ref_list = xdebug_hash_alloc(256, (xdebug_hash_dtor_t) xdebug_ref_list_dtor);
 	tmp_recorder_context->func_ref_list = xdebug_hash_alloc(256, (xdebug_hash_dtor_t) xdebug_ref_list_dtor);
 	tmp_recorder_context->var_ref_list = xdebug_hash_alloc(256, (xdebug_hash_dtor_t) xdebug_ref_list_dtor);
+	tmp_recorder_context->start_time = xdebug_get_nanotime() / 1000;
 
 	return tmp_recorder_context->recorder_file ? tmp_recorder_context : NULL;
 }
@@ -249,40 +154,13 @@ static void xdebug_recorder_deinit(void *ctxt)
 	xdfree(context);
 }
 
-static void xdebug_recorder_write_header(void *ctxt)
-{
-	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
-	xdebug_recorder_section *section;
-	size_t                   data_size = 0;
-
-	fwrite("XDEBUG", strlen("XDEBUG"), 1, context->recorder_file);
-
-	data_size += unum_size(XDEBUG_BUILD_ID);
-	data_size += unum_size(PHP_VERSION_ID);
-	data_size += unum_size(1); // ZTS flag
-	data_size += unum_size(PHP_DEBUG);
-
-	section = section_create(SECTION_HEADER, SECTION_HEADER_VERSION, sizeof(uint32_t) + 5*sizeof(uint8_t));
-	add_unum(section, XDEBUG_BUILD_ID);
-	add_unum(section, PHP_VERSION_ID);
-#ifdef ZTS
-	add_unum(section, 1);
-#else
-	add_unum(section, 0);
-#endif
-	add_unum(section, PHP_DEBUG);
-
-	recorder_write_section(context, section);
-}
-
-
-
+/* Reference Lists */
 static void ref_list_size_counter(void *vs, xdebug_hash_element *he)
 {
 	size_t                *size = (size_t*) vs;
 	xdebug_ref_list_entry *entry = (xdebug_ref_list_entry*) he->ptr;
 
-	*size += unum_size(entry->idx) + string_size(entry->name_len);
+	*size += (XDEBUG_RECORDER_MAX_UNUM_SIZE * 2) + entry->name_len; /* Index + Str Length + String Data */
 }
 
 static void ref_list_adder(void *s, xdebug_hash_element *he)
@@ -290,55 +168,77 @@ static void ref_list_adder(void *s, xdebug_hash_element *he)
 	xdebug_recorder_section *section = (xdebug_recorder_section*) s;
 	xdebug_ref_list_entry *entry = (xdebug_ref_list_entry*) he->ptr;
 
-	add_unum(section, entry->idx);
-	add_string(section, entry->name_len, entry->name);
+	xdebug_recorder_add_unum(section, entry->idx);
+	xdebug_recorder_add_string(section, entry->name_len, entry->name);
 }
-
 
 static void add_file_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = unum_size(context->file_ref_list->size);
+	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->file_ref_list, (void*) &array_size, ref_list_size_counter);
 
-	section = section_create(SECTION_FILE_REF_LIST, SECTION_FILE_REF_LIST_VERSION, array_size);
+	section = xdebug_recorder_section_create(SECTION_FILE_REF_LIST, SECTION_FILE_REF_LIST_VERSION, array_size);
 
-	add_unum(section, context->file_ref_list->size);
+	xdebug_recorder_add_unum(section, context->file_ref_list->size);
 	xdebug_hash_apply(context->file_ref_list, (void*) section, ref_list_adder);
 
-	recorder_write_section(context, section);
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
 static void add_func_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = unum_size(context->func_ref_list->size);
+	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->func_ref_list, (void*) &array_size, ref_list_size_counter);
 
-	section = section_create(SECTION_FUNC_REF_LIST, SECTION_FUNC_REF_LIST_VERSION, array_size);
+	section = xdebug_recorder_section_create(SECTION_FUNC_REF_LIST, SECTION_FUNC_REF_LIST_VERSION, array_size);
 
-	add_unum(section, context->func_ref_list->size);
+	xdebug_recorder_add_unum(section, context->func_ref_list->size);
 	xdebug_hash_apply(context->func_ref_list, (void*) section, ref_list_adder);
 
-	recorder_write_section(context, section);
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
 static void add_var_ref_list(xdebug_recorder_context *context)
 {
 	xdebug_recorder_section *section;
-	size_t                   array_size = unum_size(context->var_ref_list->size);
+	size_t                   array_size = XDEBUG_RECORDER_MAX_UNUM_SIZE; // to cover ref list size
 
 	xdebug_hash_apply(context->var_ref_list, (void*) &array_size, ref_list_size_counter);
 
-	section = section_create(SECTION_VAR_REF_LIST, SECTION_VAR_REF_LIST_VERSION, array_size);
+	section = xdebug_recorder_section_create(SECTION_VAR_REF_LIST, SECTION_VAR_REF_LIST_VERSION, array_size);
 
-	add_unum(section, context->var_ref_list->size);
+	xdebug_recorder_add_unum(section, context->var_ref_list->size);
 	xdebug_hash_apply(context->var_ref_list, (void*) section, ref_list_adder);
 
-	recorder_write_section(context, section);
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
+
+/* Header and Footer */
+static void xdebug_recorder_write_header(void *ctxt)
+{
+	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
+	xdebug_recorder_section *section;
+
+	fwrite("XDEBUG", strlen("XDEBUG"), 1, context->recorder_file);
+
+	section = xdebug_recorder_section_create(SECTION_HEADER, SECTION_HEADER_VERSION, 32);
+	xdebug_recorder_add_unum(section, XDEBUG_BUILD_ID);
+	xdebug_recorder_add_unum(section, PHP_VERSION_ID);
+#ifdef ZTS
+	xdebug_recorder_add_unum(section, 1);
+#else
+	xdebug_recorder_add_unum(section, 0);
+#endif
+	xdebug_recorder_add_unum(section, PHP_DEBUG);
+	xdebug_recorder_add_unum(section, context->start_time);
+
+	xdebug_recorder_write_section(context->recorder_file, section);
+}
+
 
 static void xdebug_recorder_write_footer(void *ctxt)
 {
@@ -351,6 +251,7 @@ static void xdebug_recorder_write_footer(void *ctxt)
 	fflush(context->recorder_file);
 }
 
+/* Ops */
 static char *xdebug_recorder_get_filename(void *ctxt)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
@@ -363,7 +264,13 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	xdebug_recorder_section *section;
 	uint64_t file_index;
 	uint64_t function_index;
+	size_t i;
 	char     *tmp_fname;
+	size_t argument_count = fse->varc;
+
+	if (fse->function.internal) {
+		argument_count = 0;
+	}
 
 	/* Get file reference */
 	file_index = get_file_ref(context, ZSTR_VAL(fse->filename), ZSTR_LEN(fse->filename));
@@ -374,18 +281,21 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	xdfree(tmp_fname);
 
 	/* file_index + function_index + timestamp + number of arguments */
-	section = section_create(
-		SECTION_CALL, SECTION_CALL_VERSION,
-		unum_size(fse->function_nr) + unum_size(fse->level) +
-		unum_size(file_index) + unum_size(function_index) + unum_size(fse->nanotime) + unum_size(fse->varc));
-	add_unum(section, fse->function_nr);
-	add_unum(section, fse->level);
-	add_unum(section, file_index);
-	add_unum(section, function_index);
-	add_unum(section, fse->nanotime);
-	add_unum(section, fse->varc);
+	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 6) * XDEBUG_RECORDER_MAX_UNUM_SIZE);
+	xdebug_recorder_add_unum(section, fse->function_nr);
+	xdebug_recorder_add_unum(section, fse->level);
+	xdebug_recorder_add_unum(section, file_index);
+	xdebug_recorder_add_unum(section, function_index);
+	xdebug_recorder_add_unum(section, (fse->nanotime/ 1000) - context->start_time);
+	xdebug_recorder_add_unum(section, argument_count);
 
-	recorder_write_section(context, section);
+	/* Add argument name references */
+	for (i = 0; i < argument_count; i++) {
+		uint64_t var_ref = get_var_ref(context, ZSTR_VAL(fse->var[i].name), ZSTR_LEN(fse->var[i].name));
+		xdebug_recorder_add_unum(section, var_ref);
+	}
+
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
 static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse, int function_nr)
@@ -399,17 +309,15 @@ static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse
 static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, function_stack_entry *fse)
 {
 	xdebug_recorder_section *section;
+	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
 
 	/* function_nr + level + timestamp */
-	section = section_create(
-		SECTION_EXIT, SECTION_EXIT_VERSION,
-		unum_size(fse->function_nr) + unum_size(fse->level) +
-		unum_size(fse->nanotime));
-	add_unum(section, fse->function_nr);
-	add_unum(section, fse->level);
-	add_unum(section, fse->nanotime);
+	section = xdebug_recorder_section_create(SECTION_EXIT, SECTION_EXIT_VERSION, 3 * XDEBUG_RECORDER_MAX_UNUM_SIZE);
+	xdebug_recorder_add_unum(section, fse->function_nr);
+	xdebug_recorder_add_unum(section, fse->level);
+	xdebug_recorder_add_unum(section, ntime);
 
-	recorder_write_section(context, section);
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
 
@@ -466,16 +374,14 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, zend_file_handle
 	}
 
 	/* file_index + flags + name + file size + bytes */
-	section = section_create(
-		SECTION_FILE, SECTION_FILE_VERSION,
-		unum_size(file_index) + unum_size(flags) + unum_size(handle->len) + handle->len);
-	add_unum(section, file_index);
-	add_unum(section, flags);
-	add_unum(section, handle->len);
+	section = xdebug_recorder_section_create(SECTION_FILE, SECTION_FILE_VERSION, (3 * XDEBUG_RECORDER_MAX_UNUM_SIZE) + handle->len);
+	xdebug_recorder_add_unum(section, file_index);
+	xdebug_recorder_add_unum(section, flags);
+	xdebug_recorder_add_unum(section, handle->len);
 
-	add_data(section, handle->len, (uint8_t*)handle->buf);
+	xdebug_recorder_add_data(section, handle->len, (uint8_t*)handle->buf);
 
-	recorder_write_section(context, section);
+	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
 /* Plumbing */

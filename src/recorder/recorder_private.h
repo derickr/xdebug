@@ -29,6 +29,7 @@ struct _xdebug_recorder_context
 	xdebug_hash *file_ref_list;
 	xdebug_hash *func_ref_list;
 	xdebug_hash *var_ref_list;
+	uint64_t     start_time;
 };
 
 struct _xdebug_ref_list_entry
