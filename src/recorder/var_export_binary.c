@@ -29,42 +29,23 @@
 static void xdebug_var_export_binary(xdebug_recorder_section *section, zval **struc, xdebug_var_export_options *options);
 
 ZEND_EXTERN_MODULE_GLOBALS(xdebug)
-#if 0
-static int xdebug_array_element_export_text_ansi(zval *zv_nptr, zend_ulong index_key, zend_string *hash_key, int level, int mode, xdebug_str *str, int debug_zval, xdebug_var_export_options *options)
+
+static int xdebug_array_element_export_binary(zval *zv_nptr, zend_ulong index_key, zend_string *hash_key, xdebug_recorder_section *section, xdebug_var_export_options *options)
 {
 	zval **zv = &zv_nptr;
 
-	if (options->runtime[level].current_element_nr >= options->runtime[level].start_element_nr &&
-		options->runtime[level].current_element_nr < options->runtime[level].end_element_nr)
-	{
-		xdebug_str_add_fmt(str, "%*s", (level * 2), "");
-
-		if (HASH_KEY_IS_NUMERIC(hash_key)) { /* numeric key */
-			xdebug_str_add_fmt(str, "[" XDEBUG_INT_FMT "] %s=>%s\n", index_key, ANSI_COLOR_POINTER, ANSI_COLOR_RESET);
-		} else { /* string key */
-			zend_string *tmp, *tmp2;
-
-			tmp = php_str_to_str(ZSTR_VAL(hash_key), ZSTR_LEN(hash_key), (char*) "'", 1, (char*) "\\'", 2);
-			tmp2 = php_str_to_str(ZSTR_VAL(tmp), ZSTR_LEN(tmp), (char*) "\0", 1, (char*) "\\0", 2);
-			if (tmp) {
-				zend_string_release(tmp);
-			}
-			xdebug_str_addc(str, '\'');
-			if (tmp2) {
-				xdebug_str_add_zstr(str, tmp2);
-				zend_string_release(tmp2);
-			}
-			xdebug_str_add_literal(str, "' =>\n");
-		}
-		xdebug_var_export_text_ansi(zv, str, mode, level + 1, debug_zval, options);
+	xdebug_recorder_add_unum(section, HASH_KEY_IS_NUMERIC(hash_key));
+	if (HASH_KEY_IS_NUMERIC(hash_key)) { /* numeric key */
+		xdebug_recorder_add_unum(section, index_key);
+	} else { /* string key */
+		xdebug_recorder_add_string(section, ZSTR_LEN(hash_key), ZSTR_VAL(hash_key));
 	}
-	if (options->runtime[level].current_element_nr == options->runtime[level].end_element_nr) {
-		xdebug_str_add_fmt(str, "\n%*s(more elements)...\n", (level * 2), "");
-	}
-	options->runtime[level].current_element_nr++;
+	xdebug_var_export_binary(section, zv, options);
+
 	return 0;
 }
 
+#if 0
 static int xdebug_object_element_export_text_ansi(zval *object, zval *zv_nptr, zend_ulong index_key, zend_string *hash_key, int level, int mode, xdebug_str *str, int debug_zval, xdebug_var_export_options *options)
 {
 	zval **zv = &zv_nptr;
@@ -151,17 +132,17 @@ static void handle_closure(xdebug_str *str, zval *obj, int level, int mode)
 
 static void xdebug_var_export_binary(xdebug_recorder_section *section, zval **struc, xdebug_var_export_options *options)
 {
-#if 0
 	HashTable *myht;
+#if 0
 	char*     tmp_str;
 	int       tmp_len;
 #if PHP_VERSION_ID < 70400
 	int       is_temp;
 #endif
+#endif
 	zend_ulong num;
 	zend_string *key;
 	zval *val;
-#endif
 	zval *tmpz;
 	int   z_type;
 
@@ -201,33 +182,28 @@ static void xdebug_var_export_binary(xdebug_recorder_section *section, zval **st
 		case IS_STRING:
 			xdebug_recorder_add_string(section, Z_STRLEN_P(*struc), Z_STRVAL_P(*struc));
 			break;
-#if 0
+
 		case IS_ARRAY:
 			myht = Z_ARRVAL_P(*struc);
 
 			if (!xdebug_zend_hash_is_recursive(myht)) {
-				xdebug_str_add_fmt(str, "%sarray%s(%s%d%s) {\n", ANSI_COLOR_BOLD, ANSI_COLOR_BOLD_OFF, ANSI_COLOR_LONG, myht->nNumOfElements, ANSI_COLOR_RESET);
-				if (level <= options->max_depth) {
-					options->runtime[level].current_element_nr = 0;
-					options->runtime[level].start_element_nr = 0;
-					options->runtime[level].end_element_nr = options->max_children;
+				xdebug_recorder_add_unum(section, myht->nNumOfElements);
 
-					xdebug_zend_hash_apply_protection_begin(myht);
+				xdebug_zend_hash_apply_protection_begin(myht);
 
-					ZEND_HASH_FOREACH_KEY_VAL_IND(myht, num, key, val) {
-						xdebug_array_element_export_text_ansi(val, num, key, level, mode, str, debug_zval, options);
-					} ZEND_HASH_FOREACH_END();
+				ZEND_HASH_FOREACH_KEY_VAL_IND(myht, num, key, val) {
+					xdebug_array_element_export_binary(val, num, key, section, options);
+				} ZEND_HASH_FOREACH_END();
 
-					xdebug_zend_hash_apply_protection_end(myht);
-				} else {
-					xdebug_str_add_fmt(str, "%*s...\n", (level * 2), "");
-				}
-				xdebug_str_add_fmt(str, "%*s}", (level * 2) - 2 , "");
+				xdebug_zend_hash_apply_protection_end(myht);
+#if 0
 			} else {
 				xdebug_str_add_fmt(str, "&%sarray%s", ANSI_COLOR_BOLD, ANSI_COLOR_BOLD_OFF);
+#endif
 			}
 			break;
 
+#if 0
 		case IS_OBJECT: {
 #if PHP_VERSION_ID >= 80100
 			zend_class_entry *ce = Z_OBJCE_P(*struc);
