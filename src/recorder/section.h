@@ -33,7 +33,9 @@
 #define SECTION_CALL_VERSION                   0
 #define SECTION_EXIT                           0x07
 #define SECTION_EXIT_VERSION                   0
-#define SECTION_VARIABLE                       0x08
+#define SECTION_RETURN_VALUE                   0x08
+#define SECTION_RETURN_VALUE_VERSION           0
+#define SECTION_VARIABLE                       0x09
 #define SECTION_VARIABLE_VERSION               0
 
 #define SECTION_MASK                           0x3F /* 6 bits, 63 types */

@@ -310,6 +310,7 @@ static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse
 	xdebug_recorder_add_function_call(context, fse);
 }
 
+
 static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, function_stack_entry *fse)
 {
 	xdebug_recorder_section *section;
@@ -333,12 +334,27 @@ static void xdebug_recorder_function_exit(void *ctxt, function_stack_entry *fse,
 	xdebug_recorder_add_function_exit(context, fse);
 }
 
+
+static void xdebug_recorder_add_function_return_value(xdebug_recorder_context *context, int function_nr, zval *return_value)
+{
+	xdebug_recorder_section *section;
+
+	section = xdebug_recorder_section_create(SECTION_RETURN_VALUE, SECTION_RETURN_VALUE_VERSION, 1 * XDEBUG_RECORDER_AVG_UNUM_SIZE);
+	xdebug_recorder_add_unum(section, function_nr);
+	xdebug_recorder_add_zval(section, *return_value);
+
+	xdebug_recorder_write_section(context->recorder_file, section);
+}
+
+
 static void xdebug_recorder_function_return_value(void *ctxt, function_stack_entry *fse, int function_nr, zval *return_value)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
 
+	xdebug_recorder_add_function_return_value(context, function_nr, return_value);
 	fflush(context->recorder_file);
 }
+
 
 void xdebug_recorder_generator_return_value(void *ctxt, function_stack_entry *fse, int function_nr, zend_generator *generator)
 {
@@ -346,6 +362,7 @@ void xdebug_recorder_generator_return_value(void *ctxt, function_stack_entry *fs
 
 	fflush(context->recorder_file);
 }
+
 
 static uint64_t recorder_add_file_to_index(xdebug_recorder_context *context, const char *filename)
 {
