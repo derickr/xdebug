@@ -43,6 +43,8 @@ void xdebug_recorder_execute_ex_end(int function_nr, function_stack_entry *fse, 
 int xdebug_recorder_execute_internal(int function_nr, function_stack_entry *fse);
 void xdebug_recorder_execute_internal_end(int function_nr, function_stack_entry *fse, zval *return_value);
 
+void xdebug_recorder_statement_call(zend_string *filename, int lineno);
+
 #if 0
 void xdebug_tracing_save_trace_context(void **old_trace_context);
 void xdebug_tracing_restore_trace_context(void *old_trace_context);

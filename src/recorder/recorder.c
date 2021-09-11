@@ -253,13 +253,15 @@ static void xdebug_recorder_write_footer(void *ctxt)
 }
 
 /* Ops */
-static void xdebug_recorder_tick(xdebug_recorder_context *context)
+static void xdebug_recorder_tick(xdebug_recorder_context *context, uint64_t file_ref, uint64_t lineno)
 {
 	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
 
 	xdebug_recorder_section *section = xdebug_recorder_section_create(SECTION_TICK, SECTION_TICK_VERSION, 20);
 	xdebug_recorder_add_unum(section, ++context->tick);
 	xdebug_recorder_add_unum(section, ntime);
+	xdebug_recorder_add_unum(section, file_ref);
+	xdebug_recorder_add_unum(section, lineno);
 	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
@@ -315,8 +317,10 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
+	uint64_t file_ref;
 
-	xdebug_recorder_tick(context);
+	file_ref = get_file_ref(context, ZSTR_VAL(fse->filename), ZSTR_LEN(fse->filename));
+	xdebug_recorder_tick(context, file_ref, fse->op_array->line_start);
 
 	/* Add call entry */
 	xdebug_recorder_add_function_call(context, fse);
@@ -338,8 +342,10 @@ static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, 
 static void xdebug_recorder_function_exit(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
+	uint64_t file_ref;
 
-	xdebug_recorder_tick(context);
+	file_ref = get_file_ref(context, ZSTR_VAL(fse->filename), ZSTR_LEN(fse->filename));
+	xdebug_recorder_tick(context, file_ref, fse->op_array->line_end);
 
 	/* Add exit entry */
 	xdebug_recorder_add_function_exit(context, fse);
@@ -561,6 +567,21 @@ void xdebug_recorder_compile_file(zend_file_handle *handle)
 	}
 
 	xdebug_recorder_add_file(XG_RECORDER(recorder_context), handle);
+}
+
+void xdebug_recorder_statement_call(zend_string *filename, int lineno)
+{
+	xdebug_recorder_context *context;
+	uint64_t file_ref;
+
+	context = XG_RECORDER(recorder_context);
+	if (!context) {
+		return;
+	}
+
+	file_ref = get_file_ref(context, ZSTR_VAL(filename), ZSTR_LEN(filename));
+
+	xdebug_recorder_tick(context, file_ref, lineno);
 }
 
 #if 0
