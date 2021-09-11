@@ -136,6 +136,7 @@ static void *xdebug_recorder_init(void)
 	tmp_recorder_context->func_ref_list = xdebug_hash_alloc(256, (xdebug_hash_dtor_t) xdebug_ref_list_dtor);
 	tmp_recorder_context->var_ref_list = xdebug_hash_alloc(256, (xdebug_hash_dtor_t) xdebug_ref_list_dtor);
 	tmp_recorder_context->start_time = xdebug_get_nanotime() / 1000;
+	tmp_recorder_context->tick = 0;
 
 	return tmp_recorder_context->recorder_file ? tmp_recorder_context : NULL;
 }
@@ -252,6 +253,16 @@ static void xdebug_recorder_write_footer(void *ctxt)
 }
 
 /* Ops */
+static void xdebug_recorder_tick(xdebug_recorder_context *context)
+{
+	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
+
+	xdebug_recorder_section *section = xdebug_recorder_section_create(SECTION_TICK, SECTION_TICK_VERSION, 20);
+	xdebug_recorder_add_unum(section, ++context->tick);
+	xdebug_recorder_add_unum(section, ntime);
+	xdebug_recorder_write_section(context->recorder_file, section);
+}
+
 static char *xdebug_recorder_get_filename(void *ctxt)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
@@ -281,12 +292,11 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	xdfree(tmp_fname);
 
 	/* file_index + function_index + timestamp + number of arguments */
-	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 6) * XDEBUG_RECORDER_AVG_UNUM_SIZE);
+	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 5) * XDEBUG_RECORDER_AVG_UNUM_SIZE);
 	xdebug_recorder_add_unum(section, fse->function_nr);
 	xdebug_recorder_add_unum(section, fse->level);
 	xdebug_recorder_add_unum(section, file_index);
 	xdebug_recorder_add_unum(section, function_index);
-	xdebug_recorder_add_unum(section, (fse->nanotime/ 1000) - context->start_time);
 	xdebug_recorder_add_unum(section, argument_count);
 
 	/* Add argument name references */
@@ -306,6 +316,8 @@ static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
 
+	xdebug_recorder_tick(context);
+
 	/* Add call entry */
 	xdebug_recorder_add_function_call(context, fse);
 }
@@ -314,21 +326,20 @@ static void xdebug_recorder_function_entry(void *ctxt, function_stack_entry *fse
 static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, function_stack_entry *fse)
 {
 	xdebug_recorder_section *section;
-	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
 
 	/* function_nr + level + timestamp */
-	section = xdebug_recorder_section_create(SECTION_EXIT, SECTION_EXIT_VERSION, 3 * XDEBUG_RECORDER_AVG_UNUM_SIZE);
+	section = xdebug_recorder_section_create(SECTION_EXIT, SECTION_EXIT_VERSION, 2 * XDEBUG_RECORDER_AVG_UNUM_SIZE);
 	xdebug_recorder_add_unum(section, fse->function_nr);
 	xdebug_recorder_add_unum(section, fse->level);
-	xdebug_recorder_add_unum(section, ntime);
 
 	xdebug_recorder_write_section(context->recorder_file, section);
 }
 
-
 static void xdebug_recorder_function_exit(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
+
+	xdebug_recorder_tick(context);
 
 	/* Add exit entry */
 	xdebug_recorder_add_function_exit(context, fse);
