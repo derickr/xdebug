@@ -767,7 +767,7 @@ ZEND_DLEXPORT void xdebug_statement_call(zend_execute_data *frame)
 		xdebug_debugger_statement_call(op_array->filename, lineno);
 	}
 	if (XDEBUG_MODE_IS(XDEBUG_MODE_RECORDER)) {
-		xdebug_recorder_statement_call(op_array->filename, lineno);
+		xdebug_recorder_statement_call(op_array, lineno);
 	}
 }
 

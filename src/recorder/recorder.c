@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Xdebug                                                               |
    +----------------------------------------------------------------------+
-   | Copyright (c) 2002-2021 Derick Rethans                               |
+   | Copyright (c) 2021-2021 Derick Rethans                               |
    +----------------------------------------------------------------------+
    | This source file is subject to version 1.01 of the Xdebug license,   |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -569,7 +569,30 @@ void xdebug_recorder_compile_file(zend_file_handle *handle)
 	xdebug_recorder_add_file(XG_RECORDER(recorder_context), handle);
 }
 
-void xdebug_recorder_statement_call(zend_string *filename, int lineno)
+
+/* Statement Calls */
+void xdebug_recorder_store_all_local_vars(xdebug_recorder_context *context, zend_op_array *opa)
+{
+	xdebug_recorder_section *section = xdebug_recorder_section_create(SECTION_LOCAL_VARS, SECTION_LOCAL_VARS_VERSION, 512);
+	unsigned int             i;
+
+	xdebug_recorder_add_unum(section, context->tick);
+	xdebug_recorder_add_unum(section, opa->last_var);
+
+	for (i = 0; i < (unsigned int) opa->last_var; i++) {
+		uint64_t var_ref;
+		zval *value;
+
+		var_ref = get_var_ref(context, STR_NAME_VAL(opa->vars[i]), STR_NAME_LEN(opa->vars[i]));
+		xdebug_recorder_add_unum(section, var_ref);
+		value = ZEND_CALL_VAR_NUM(EG(current_execute_data), i);
+		xdebug_recorder_add_zval(section, *value);
+	}
+
+	xdebug_recorder_write_section(context->recorder_file, section);
+}
+
+void xdebug_recorder_statement_call(zend_op_array *opa, int lineno)
 {
 	xdebug_recorder_context *context;
 	uint64_t file_ref;
@@ -579,9 +602,10 @@ void xdebug_recorder_statement_call(zend_string *filename, int lineno)
 		return;
 	}
 
-	file_ref = get_file_ref(context, ZSTR_VAL(filename), ZSTR_LEN(filename));
+	file_ref = get_file_ref(context, ZSTR_VAL(opa->filename), ZSTR_LEN(opa->filename));
 
 	xdebug_recorder_tick(context, file_ref, lineno);
+	xdebug_recorder_store_all_local_vars(context, opa);
 }
 
 #if 0

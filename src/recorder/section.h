@@ -39,6 +39,8 @@
 #define SECTION_VARIABLE_VERSION               0
 #define SECTION_TICK                           0x0A
 #define SECTION_TICK_VERSION                   0
+#define SECTION_LOCAL_VARS                     0x0B
+#define SECTION_LOCAL_VARS_VERSION             0
 
 #define SECTION_MASK                           0x3F /* 6 bits, 63 types */
 #define SECTION_VERSION_SHIFT                  6
