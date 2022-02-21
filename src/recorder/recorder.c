@@ -293,6 +293,8 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	function_index = get_func_ref(context, tmp_fname, strlen(tmp_fname));
 	xdfree(tmp_fname);
 
+	fprintf(stderr, "Function Nr: %d\n", fse->function_nr);
+
 	/* file_index + function_index + timestamp + number of arguments */
 	section = xdebug_recorder_section_create(SECTION_CALL, SECTION_CALL_VERSION, (argument_count + 5) * XDEBUG_RECORDER_AVG_UNUM_SIZE);
 	xdebug_recorder_add_unum(section, fse->function_nr);

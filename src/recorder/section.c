@@ -29,6 +29,8 @@ struct _xdebug_recorder_section {
 #define INITIAL_CAPACITY  128
 #define EXTRA_CAPACITY    256
 
+static void print_hex(xdebug_recorder_section *section);
+
 static void ensure_size(xdebug_recorder_section *section, size_t size)
 {
 	if (section->size + size >= section->capacity) {
@@ -120,9 +122,23 @@ fprintf(stderr, "Alloc for %p [%d:%d] as %ld\n", tmp, type, version, tmp->capaci
 void xdebug_recorder_write_section(FILE *recorder_file, xdebug_recorder_section *section)
 {
 	xdebug_recorder_add_unum(section, 0x7F);
-fprintf(stderr, "Write size: %ld\n", section->size);
+
+	print_hex(section);
+
 	fwrite(section->data, section->size, 1, recorder_file);
 	fflush(recorder_file);
 
 	xdebug_recorder_section_free(section);
+}
+
+static void print_hex(xdebug_recorder_section *section)
+{
+	int i;
+
+	fprintf(stderr, "%4ld: ", section->size);
+	fprintf(stderr, "[");
+	for (i = 0; i < section->size; i++) {
+		fprintf(stderr, "%02X", section->data[i]);
+	}
+	fprintf(stderr, "]\n");
 }

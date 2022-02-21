@@ -163,6 +163,7 @@ static void xdebug_var_export_binary(xdebug_recorder_section *section, zval **st
 		z_type = Z_TYPE_P(*struc);
 	}
 
+	fprintf(stderr, "TYPE: %0d\n", z_type);
 	xdebug_recorder_add_unum(section, (uint64_t) z_type);
 
 	switch (z_type) {
@@ -296,6 +297,7 @@ static void xdebug_var_export_binary(xdebug_recorder_section *section, zval **st
 		}
 #endif
 		default:
+			fprintf(stderr, "Unknown type: %d\n", z_type);
 			break;
 	}
 }
