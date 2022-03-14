@@ -408,7 +408,11 @@ void xdebug_recorder_add_file(xdebug_recorder_context *context, zend_file_handle
 	uint8_t flags = 0x00;
 	int64_t file_index;
 
+#if PHP_VERSION_ID >= 80100
+	file_index = recorder_add_file_to_index(context, ZSTR_VAL(handle->filename));
+#else
 	file_index = recorder_add_file_to_index(context, handle->filename);
+#endif
 	if (file_index == -1) {
 		return;
 	}
