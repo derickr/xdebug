@@ -29,6 +29,7 @@ struct _xdebug_recorder_section {
 #define INITIAL_CAPACITY  128
 #define EXTRA_CAPACITY    256
 
+static void print_hex_data(size_t size, uint8_t *data);
 static void print_hex(xdebug_recorder_section *section);
 
 static void ensure_size(xdebug_recorder_section *section, size_t size)
@@ -54,16 +55,16 @@ static void xdebug_recorder_add_unum_ex(xdebug_recorder_section *section, uint64
 {
 	uint64_t x = value;
 
-//printf("ADD_UNUM(%ld): ", value);
+fprintf(stderr, "ADD_UNUM(%ld): ", value);
 	do {
 		section->data[section->size] = x & 0x7FU;
 		if (x >>= 7) {
 			section->data[section->size] |= 0x80U;
 		}
-//printf("%02X", *(uint8_t*)section->ptr);
+fprintf(stderr, "%02X", section->data[section->size]);
 		++section->size;
 	} while (x);
-//printf("\n");
+fprintf(stderr, "\n");
 }
 
 void xdebug_recorder_add_unum(xdebug_recorder_section *section, uint64_t value)
@@ -87,6 +88,8 @@ void xdebug_recorder_add_data(xdebug_recorder_section *section, size_t length, u
 {
 	ensure_size(section, length);
 
+printf("ADD_DATA: ");
+print_hex_data(length, data);
 	memcpy(&section->data[section->size], data, length);
 	section->size += length;
 }
@@ -129,6 +132,18 @@ void xdebug_recorder_write_section(FILE *recorder_file, xdebug_recorder_section 
 	fflush(recorder_file);
 
 	xdebug_recorder_section_free(section);
+}
+
+static void print_hex_data(size_t size, uint8_t *data)
+{
+	int i;
+
+	fprintf(stderr, "%4ld: ", size);
+	fprintf(stderr, "[");
+	for (i = 0; i < size; i++) {
+		fprintf(stderr, "%02X", data[i]);
+	}
+	fprintf(stderr, "]\n");
 }
 
 static void print_hex(xdebug_recorder_section *section)

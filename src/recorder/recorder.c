@@ -258,6 +258,8 @@ static void xdebug_recorder_tick(xdebug_recorder_context *context, uint64_t file
 	uint64_t ntime = (xdebug_get_nanotime() / 1000) - context->start_time;
 
 	xdebug_recorder_section *section = xdebug_recorder_section_create(SECTION_TICK, SECTION_TICK_VERSION, 20);
+
+	fprintf(stderr, "TICK: %ld\n", context->tick+1);
 	xdebug_recorder_add_unum(section, ++context->tick);
 	xdebug_recorder_add_unum(section, ntime);
 	xdebug_recorder_add_unum(section, file_ref);
@@ -301,6 +303,7 @@ static void xdebug_recorder_add_function_call(xdebug_recorder_context *context, 
 	xdebug_recorder_add_unum(section, fse->level);
 	xdebug_recorder_add_unum(section, file_index);
 	xdebug_recorder_add_unum(section, function_index);
+	xdebug_recorder_add_unum(section, fse->lineno);
 	xdebug_recorder_add_unum(section, argument_count);
 
 	/* Add argument name references */
@@ -344,6 +347,7 @@ static void xdebug_recorder_add_function_exit(xdebug_recorder_context *context, 
 static void xdebug_recorder_function_exit(void *ctxt, function_stack_entry *fse, int function_nr)
 {
 	xdebug_recorder_context *context = (xdebug_recorder_context*) ctxt;
+
 	uint64_t file_ref;
 
 	file_ref = get_file_ref(context, ZSTR_VAL(fse->filename), ZSTR_LEN(fse->filename));
