@@ -55,7 +55,7 @@ static void xdebug_recorder_add_unum_ex(xdebug_recorder_section *section, uint64
 {
 	uint64_t x = value;
 
-fprintf(stderr, "ADD_UNUM(%ld): ", value);
+fprintf(stderr, "ADD_UNUM(%ld) @ %ld: ", value, section->size);
 	do {
 		section->data[section->size] = x & 0x7FU;
 		if (x >>= 7) {
@@ -88,7 +88,7 @@ void xdebug_recorder_add_data(xdebug_recorder_section *section, size_t length, u
 {
 	ensure_size(section, length);
 
-printf("ADD_DATA: ");
+fprintf(stderr, "ADD_DATA @ %ld: ", section->size);
 print_hex_data(length, data);
 	memcpy(&section->data[section->size], data, length);
 	section->size += length;
