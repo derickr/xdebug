@@ -162,6 +162,12 @@ function xdebug_set_filter(int $group, int $listType, array $configuration) {}
 
 /* -----------------------------------------------------------------------*/
 
+/* Set a user-defined source map */
+/** @return void */
+function xdebug_set_source_map(string $mapFile) {}
+
+/* -----------------------------------------------------------------------*/
+
 /* Starts code coverage */
 /** @return void */
 function xdebug_start_code_coverage(int $options = 0) {}

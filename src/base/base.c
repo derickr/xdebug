@@ -1327,6 +1327,10 @@ void xdebug_base_rinit()
 	XG_BASE(filters_stack)             = xdebug_llist_alloc(xdebug_llist_string_dtor);
 	XG_BASE(filters_tracing)           = xdebug_llist_alloc(xdebug_llist_string_dtor);
 
+	/* Source Map */
+	XG_BASE(source_map) = xdebug_hash_alloc(4096, xdfree);
+	XG_BASE(source_map_rev) = xdebug_hash_alloc(4096, xdfree);
+
 	xdebug_base_overloaded_functions_setup();
 
 	if (XG_BASE(private_tmp)) {
@@ -1361,6 +1365,10 @@ void xdebug_base_post_deactivate()
 	xdebug_llist_destroy(XG_BASE(filters_tracing), NULL);
 	XG_BASE(filters_tracing) = NULL;
 	XG_BASE(filters_code_coverage) = NULL;
+
+	/* Source Map */
+	xdebug_hash_destroy(XG_BASE(source_map));
+	xdebug_hash_destroy(XG_BASE(source_map_rev));
 
 	xdebug_base_overloaded_functions_restore();
 }

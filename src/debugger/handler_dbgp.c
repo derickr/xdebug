@@ -2,7 +2,7 @@
    +----------------------------------------------------------------------+
    | Xdebug                                                               |
    +----------------------------------------------------------------------+
-   | Copyright (c) 2002-2022 Derick Rethans                               |
+   | Copyright (c) 2002-2023 Derick Rethans                               |
    +----------------------------------------------------------------------+
    | This source file is subject to version 1.01 of the Xdebug license,   |
    | that is bundled with this package in the file LICENSE, and is        |
@@ -37,6 +37,7 @@
 #include "handler_dbgp.h"
 #include "debugger_private.h"
 
+#include "base/map.h"
 #include "coverage/code_coverage.h"
 #include "develop/stack.h"
 #include "lib/compat.h"
@@ -923,7 +924,8 @@ DBGP_FUNC(breakpoint_set)
 			if (!fse) {
 				RETURN_RESULT(XG_DBG(status), XG_DBG(reason), XDEBUG_ERROR_STACK_DEPTH_INVALID);
 			} else {
-				char *tmp_path = xdebug_path_from_url(fse->filename);
+				const char *tmp_path = xdebug_path_from_url(fse->filename);
+				tmp_path = xdebug_base_source_map(tmp_path);
 				brk_info->filename = zend_string_init(tmp_path, strlen(tmp_path), 0);
 			}
 		} else {
@@ -935,8 +937,9 @@ DBGP_FUNC(breakpoint_set)
 
 			/* Now we do some real path checks to resolve symlinks. */
 			if (VCWD_REALPATH(ZSTR_VAL(brk_info->filename), realpath_file)) {
+				const char *mapped_realpath_file = xdebug_base_source_map(realpath_file);
 				zend_string_release(brk_info->filename);
-				brk_info->filename = zend_string_init(realpath_file, strlen(realpath_file), 0);
+				brk_info->filename = zend_string_init(mapped_realpath_file, strlen(mapped_realpath_file), 0);
 			}
 
 			zend_string_release(tmp_f);

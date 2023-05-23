@@ -96,6 +96,8 @@ Mon, Jun 06, 2022 - Xdebug 3.1.5
      <file name="base_private.h" role="src" />
      <file name="filter.c" role="src" />
      <file name="filter.h" role="src" />
+     <file name="map.c" role="src" />
+     <file name="map.h" role="src" />
     </dir>
     <dir name="lib">
      <file name="usefulstuff.c" role="src" />
