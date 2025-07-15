@@ -35,8 +35,8 @@ xdebug_stop_trace();
 TRACE START [%d-%d-%d %d:%d:%d.%d]
 %w               => $tf = '%s' %s
 %w%f %w%d     -> WithReadOnlyProps->__construct($static_string = 'two', $ro_string = 'New Value') %sbug01999.php:15
-%w               => $this->static_string = 'two' %sbug01999.php:9
-%w               => $this->ro_string = 'New Value' %sbug01999.php:9
+%w               => $this->static_string = 'two' %sbug01999.php:%r(9|11)%r
+%w               => $this->ro_string = 'New Value' %sbug01999.php:%r(9|11)%r
 %w              => $obj = class WithReadOnlyProps { public string $static_string = 'two'; public readonly string $ro_string = 'New Value' } %sbug01999.php:15
 %w%f %w%d     -> xdebug_stop_trace() %sbug01999.php:18
 %w%f %w%d

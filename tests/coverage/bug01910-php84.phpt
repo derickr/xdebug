@@ -1,9 +1,9 @@
 --TEST--
-Test for bug #1910: Code coverage misses constructor property promotion code
+Test for bug #1910: Code coverage misses constructor property promotion code (PHP < 8.5)
 --SKIPIF--
 <?php
 require __DIR__ . '/../utils.inc';
-check_reqs('PHP >= 8.0');
+check_reqs('PHP < 8.5');
 ?>
 --INI--
 xdebug.mode=coverage
