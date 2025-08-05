@@ -595,6 +595,23 @@ static bool handle_breakpoints(function_stack_entry *fse, int breakpoint_type, z
 		return false;
 	}
 
+#if PHP_VERSION_ID >= 80500
+	/* This breaks way too often, and is not ready to be merged.
+	 * 1. it breaks for all closures
+	 * 2. it also breaks when you click "run"
+	 */
+	if (
+		(breakpoint_type & XDEBUG_BREAKPOINT_TYPE_RETURN) &&
+		(ZEND_USER_CODE(fse->op_array->type)) &&
+		(fse->op_array->fn_flags & ZEND_ACC_CLOSURE) &&
+		return_value
+	) {
+		if (!XG_DBG(context).handler->remote_breakpoint(&(XG_DBG(context)), XG_BASE(stack), fse->filename, fse->lineno, XDEBUG_BREAK, NULL, 0, NULL, NULL, return_value)) {
+			return false;
+		}
+	}
+#endif
+
 	if (
 		(XG_DBG(context).breakpoint_include_return_value) &&
 		(breakpoint_type & XDEBUG_BREAKPOINT_TYPE_RETURN) &&
