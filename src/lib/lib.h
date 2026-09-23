@@ -25,6 +25,7 @@
 #include "zend_API.h"
 #include "compat.h"
 #include "set.h"
+#include "lib_private.h"
 #include "maps/maps_private.h"
 #include "maps/maps.h"
 
@@ -313,7 +314,8 @@ zval *xdebug_lib_get_active_object(void);
 function_stack_entry *xdebug_lib_get_active_stack_entry(void);
 HashTable *xdebug_lib_get_active_symbol_table(void);
 
-int xdebug_isset_opcode_handler(int opcode);
+#define xdebug_isset_opcode_handler(opcode) xdebug_set_in(XG_LIB(opcode_handlers_set), (opcode))
+
 void xdebug_set_opcode_handler(int opcode, user_opcode_handler_t handler);
 void xdebug_unset_opcode_handler(int opcode);
 void xdebug_set_opcode_multi_handler(int opcode);

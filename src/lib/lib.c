@@ -691,11 +691,6 @@ zval *xdebug_lib_get_active_object(void)
 	return XG_LIB(active_object);
 }
 
-int xdebug_isset_opcode_handler(int opcode)
-{
-	return xdebug_set_in(XG_LIB(opcode_handlers_set), opcode);
-}
-
 void xdebug_set_opcode_handler(int opcode, user_opcode_handler_t handler)
 {
 	if (xdebug_isset_opcode_handler(opcode)) {
