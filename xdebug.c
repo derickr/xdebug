@@ -717,9 +717,11 @@ ZEND_DLEXPORT void xdebug_statement_call(zend_execute_data *frame)
 		return;
 	}
 
+	if (XDEBUG_MODE_IS(XDEBUG_MODE_STEP_DEBUG)) {
 #if HAVE_XDEBUG_CONTROL_SOCKET_SUPPORT
-	xdebug_control_socket_dispatch();
+		xdebug_control_socket_dispatch();
 #endif
+	}
 
 	if (!XG_BASE(statement_handler_enabled)) {
 		return;
