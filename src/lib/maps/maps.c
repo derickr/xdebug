@@ -168,8 +168,8 @@ void xdebug_path_maps_scan(const char *script_source)
 		size_t length;
 		char *current_directory = virtual_getcwd_ex(&length);
 
-		if (scan_directory_exists(current_directory, "/.xdebug")) {
-			scan_directory(current_directory, "/.xdebug");
+		if (scan_directory_exists(current_directory, DEFAULT_SLASH_S ".xdebug")) {
+			scan_directory(current_directory, DEFAULT_SLASH_S ".xdebug");
 		}
 
 		efree(current_directory);
@@ -187,15 +187,15 @@ void xdebug_path_maps_scan(const char *script_source)
 	grand_dir = parts->c >= 4 ? xdebug_join(slash, parts, 0, parts->c - 4) : NULL;
 
 	if (grand_dir) {
-		scan_directory(grand_dir->d, "/.xdebug");
+		scan_directory(grand_dir->d, DEFAULT_SLASH_S ".xdebug");
 		xdebug_str_free(grand_dir);
 	}
 	if (parent_dir) {
-		scan_directory(parent_dir->d, "/.xdebug");
+		scan_directory(parent_dir->d, DEFAULT_SLASH_S ".xdebug");
 		xdebug_str_free(parent_dir);
 	}
 	if (current_dir) {
-		scan_directory(current_dir->d, "/.xdebug");
+		scan_directory(current_dir->d, DEFAULT_SLASH_S ".xdebug");
 		xdebug_str_free(current_dir);
 	}
 
