@@ -34,15 +34,15 @@ if (PHP_XDEBUG != 'no') {
 	}
 	ADD_FLAG("CFLAGS_XDEBUG", " /I " + configure_module_dirname + " ");
 	ADD_FLAG("CFLAGS_XDEBUG", " /I " + configure_module_dirname + "/src ");
-	ADD_SOURCES(configure_module_dirname + "/src/base", XDEBUG_BASE_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/lib", XDEBUG_LIB_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/lib/maps", XDEBUG_LIB_MAPS_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/coverage", XDEBUG_COVERAGE_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/debugger", XDEBUG_DEBUGGER_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/develop", XDEBUG_DEVELOP_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/gcstats", XDEBUG_GCSTATS_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/profiler", XDEBUG_PROFILER_SOURCES, "xdebug");
-	ADD_SOURCES(configure_module_dirname + "/src/tracing", XDEBUG_TRACING_SOURCES, "xdebug");
+	ADD_SOURCES(configure_module_dirname + "/src/base", XDEBUG_BASE_SOURCES, "xdebug", MODE_PHPIZE ? "src\\base" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/lib", XDEBUG_LIB_SOURCES, "xdebug", MODE_PHPIZE ? "src\\lib" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/lib/maps", XDEBUG_LIB_MAPS_SOURCES, "xdebug", MODE_PHPIZE ? "src\\lib\\maps" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/coverage", XDEBUG_COVERAGE_SOURCES, "xdebug", MODE_PHPIZE ? "src\\coverage" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/debugger", XDEBUG_DEBUGGER_SOURCES, "xdebug", MODE_PHPIZE ? "src\\debugger" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/develop", XDEBUG_DEVELOP_SOURCES, "xdebug", MODE_PHPIZE ? "src\\develop" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/gcstats", XDEBUG_GCSTATS_SOURCES, "xdebug", MODE_PHPIZE ? "src\\gcstats" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/profiler", XDEBUG_PROFILER_SOURCES, "xdebug", MODE_PHPIZE ? "src\\profiler" : null);
+	ADD_SOURCES(configure_module_dirname + "/src/tracing", XDEBUG_TRACING_SOURCES, "xdebug", MODE_PHPIZE ? "src\\tracing" : null);
 
 	// PHP_ZLIB is "yes"/"no" for in-tree builds, but boolean for phpize builds
 	var XDEBUG_ZLIB = (!MODE_PHPIZE && PHP_ZLIB == "yes") || (MODE_PHPIZE && PHP_ZLIB);
