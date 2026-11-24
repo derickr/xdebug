@@ -1,6 +1,6 @@
-C_TESTS=path_map_test.cpp system_utils_test.cpp fuzz-cases.cpp
-SOURCE_FILES=../../src/lib/maps/parser.c ../../src/lib/maps/maps_private.c ../../src/lib/cmd_parser.c
-HEADER_FILES=../../src/lib/maps/maps_private.h ../../src/lib/maps/maps.h
+C_TESTS=path_map_test.cpp system_utils_test.cpp fuzz-cases.cpp lines_decoder_test.cpp
+SOURCE_FILES=../../src/lib/maps/parser.c ../../src/lib/maps/maps_private.c ../../src/lib/cmd_parser.c ../../src/lib/maps/lines-encoder.c
+HEADER_FILES=../../src/lib/maps/maps_private.h ../../src/lib/maps/maps.h ../../src/lib/maps/lines-encoder.h
 INCLUDE_PATHS=-I ../../src/lib/maps -I ../../src/lib
 CPPFLAGS=-DPHP_VERSION_ID=80300 -DXDEBUG_NO_PHP_FEATURES -ggdb3 -fsanitize=address -fsanitize=undefined -O0
 LDFLAGS=-lCppUTest -fsanitize=undefined -l:libubsan.so
